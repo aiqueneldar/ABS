@@ -1,0 +1,34 @@
+statement: <id>;<command>;<payload>
+id: [String]
+command: [String]
+payload: [String];<payload>
+
+--- Command:payload ---
+
+adduser:username;email
+removeuser:userid
+getallusers:
+getuserinfofromid:userid
+getuserinfofromname:username
+changeuser:userid;username;email
+
+
+additem:barcode;name;category;description
+removeitem:barcode
+getiteminfo:barcode
+getallitems:
+changeitem:barcode;name;category;description
+
+addtransaction:barcode;userid;amount;price
+removetransaction:transactionid
+changetransaction:transcationid;barcode;userid;amount;price
+gettransaction:transactionid
+getalltransactions:
+
+addinventory:datetime
+removeinventory:inventoryid
+getlatestinventory:
+
+search:type;criteria:searchterm
+
+quit:
