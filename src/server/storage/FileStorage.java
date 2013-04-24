@@ -27,8 +27,8 @@ public class FileStorage extends Storage {
 		this.config = config;
 	}
 	
-	public boolean store(User user) {
-		return true;
+	public String store(User user) {
+		return "Success";
 	}
 	
 	public boolean store(Item item) {

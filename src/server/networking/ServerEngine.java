@@ -29,6 +29,15 @@ public class ServerEngine {
 	 */
 	private ConfigReader config;
 	
+	/**
+	 * port used for this server
+	 */
+	private int port;
+	
+	/**
+	 * timeout of a connecting client in seconds
+	 */
+	private int timeout;
 	
 	/**
 	 * Constructor
@@ -36,46 +45,64 @@ public class ServerEngine {
 	 * Constructor that starts a server listening for connecting clients
 	 */
 	public ServerEngine(ConfigReader config) {
-		ServerSocket servSocket = null;
-		Socket cliSocket = null;
-		
 		this.config = config;
 		
-		int port = 55228;
-		int timeout = 0;
+		this.port = 55228;
+		this.timeout = 0;
 		
 		try {
-			port = Integer.parseInt(this.config.getProperty("port"));
+			this.port = Integer.parseInt(this.config.getProperty("port"));
 		} catch (NumberFormatException e) {
 			System.out.println("Port number given in config is not a number. Using default port 55228");
-			port = 55228;
+			this.port = 55228;
 		}
 		
 		try {
-			timeout = Integer.parseInt(this.config.getProperty("serverTimeout"));
+			this.timeout = Integer.parseInt(this.config.getProperty("servertimeout"));
 		} catch (NumberFormatException e) {
 			System.out.println("Timeout must be a positive integer or 0. Setting infinite timeout (0)");
-			timeout = 0;
+			this.timeout = 0;
 		}
 		
 		//Se if timout is a positive integer or 0 for inginite timeout
-		if (timeout < 0) {
+		if (this.timeout < 0) {
 			System.out.println("Timeout must be _positive_ and in milliseconds, or 0 for infinite. Setting infinite timeout");
-			timeout = 0;
+			this.timeout = 0;
 		}
 		
+		//Set max connections
 		try {
-			servSocket = new ServerSocket(port);
-			
+			ServerEngine.maxConnections = Integer.parseInt(this.config.getProperty("maxclients"));
+		} catch (NumberFormatException e) {
+			System.out.println("Max clients must be a positive integer or 0. Setting infinite amount of clients (0)");
+			ServerEngine.maxConnections = 0;
+		}
+	}
+	
+	/**
+	 * Sartup method
+	 * 
+	 * This method starts upp the server after it has been initialized by the {@link Constructor}
+	 */
+	public void start() {
+		ServerSocket servSocket = null;
+		Socket cliSocket = null;
+		
+		try {
+			servSocket = new ServerSocket(this.port);
 		} catch (IOException e) {
-			System.out.println("Could not connect on port: " + port + " quitting.");
+			System.out.println("Could not connect on port: " + this.port + " quitting.");
 			System.exit(1);
 		}
 		
 		try {
 			while(true) {
 				cliSocket = servSocket.accept();
-				cliSocket.setSoTimeout(timeout);
+				cliSocket.setSoTimeout(this.timeout);
+				
+				System.out.println("New client Connected");
+				
+				new PrintWriter(cliSocket.getOutputStream(), true).println("Welcome to the server: " + this.config.getProperty("servername"));
 				
 				ClientProcesser handler = new ClientProcesser(this.config, cliSocket);
 				

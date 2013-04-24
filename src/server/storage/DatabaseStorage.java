@@ -1,8 +1,12 @@
 package server.storage;
 
 import java.sql.Connection;
+
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 import utils.ConfigReader;
 import utils.Item;
@@ -55,6 +59,11 @@ public class DatabaseStorage extends Storage {
 	 */
 	private String tblprefix;
 	
+	/**
+	 * The prepaired statement to store users in database
+	 */
+	private PreparedStatement addUserStmnt;
+	
 	
 	public DatabaseStorage(ConfigReader config) {
 		this.config = config;
@@ -76,6 +85,21 @@ public class DatabaseStorage extends Storage {
 		this.tblprefix = this.config.getProperty("tblprefix");
 		this.dbuser = this.config.getProperty("dbuser");
 		this.dbpasswd = this.config.getProperty("dbpasswd");
+		
+		// Connect to the database upon creation
+		try {
+			this.connect();
+		} catch (SQLException sqlerr) {
+			System.out.println("Could not connect to the database. SQLException thrown!");
+			System.exit(3);
+		}
+		
+		try {
+			this.addUserStmnt = this.dbconn.prepareStatement("INSERT INTO " + this.tblprefix + "user (username, email) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
+		} catch (SQLException sqlerr) {
+			System.out.println("Could not create prepared statement for inserting new user");
+			System.exit(3);
+		}
 	}
 	
 	public void connect() throws SQLException {
@@ -95,8 +119,66 @@ public class DatabaseStorage extends Storage {
 		}
 	}
 	
-	public boolean store(User user) {
-		return true;
+	public String store(User user) {
+		try {
+			this.addUserStmnt.setString(1, user.getUsername());
+		} catch (SQLException sqlerr) {
+			System.out.println("Could not set username in prepared statement");
+		}
+		
+		try {
+			this.addUserStmnt.setString(2, user.getEmail());
+		} catch (SQLException sqlerr) {
+			System.out.println("Could not set email in prepared statement");
+		}
+		
+		ResultSet uid = null;
+
+		try {
+			int affectedRows = this.addUserStmnt.executeUpdate();
+			if (affectedRows == 0) {
+				System.out.println("No rows were affected.");
+			}
+			uid = this.addUserStmnt.getGeneratedKeys();
+			if (! uid.next())
+				System.out.println("No ID returned");
+			
+		} catch (SQLException sqlerr) {
+			//Check if user already exists
+			if (sqlerr.getErrorCode() == 1062) {
+				return "Duplicate entry: " + sqlerr.getMessage();
+			} else {
+				System.out.println("Could not execute statement and get generated keys");
+				System.out.println("Technical info:");
+				System.out.println(sqlerr.getErrorCode());
+				System.out.println(sqlerr.getSQLState());
+				System.out.println(sqlerr.getMessage());
+			}
+		}
+		
+		User newUser = null;
+		
+		try {
+			if (uid != null) {
+				newUser = new User(uid.getString(1), user.getUsername(), user.getEmail());
+			} else {
+				throw new Exception("Could not create new user.");
+			}
+		} catch (SQLException sqlerr) {
+			System.out.println("Could not create a new user object with the aquired data");
+			System.out.println("Technical info:");
+			System.out.println(sqlerr.getErrorCode());
+			System.out.println(sqlerr.getSQLState());
+			System.out.println(sqlerr.getMessage());
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		
+		if (newUser != null)
+			return "Success";
+		else
+			return "Fail";
+		
 	}
 	
 	public boolean store(Item item) {

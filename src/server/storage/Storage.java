@@ -14,7 +14,7 @@ import utils.Transaction;
  */
 public abstract class Storage {
 
-	public abstract boolean store(User user);
+	public abstract String store(User user);
 	
 	public abstract boolean store(Item item);
 	

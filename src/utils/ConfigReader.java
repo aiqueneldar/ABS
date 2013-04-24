@@ -66,13 +66,16 @@ public class ConfigReader {
 		try {
 			// get the path of the config file and append hardcoded config filename
 			is = this.getClass().getClassLoader().getResourceAsStream("etc/server.cfg");
-			this.file = "etc/server.cfg";
+			this.file = "server.cfg";
 			
 			// load properties from file
 			prop.load(is);
 			
 		} catch (FileNotFoundException e) {
 			System.out.println("No configuration file found. Please create configuration file: " + this.file);
+			System.out.println("Technical Error Messages: ");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
 		} catch (IOException t) {
 			System.out.println("Could not load configuration file. Please make sure the file is readable by java process");
 		} finally {
@@ -105,6 +108,9 @@ public class ConfigReader {
 			
 		} catch (FileNotFoundException e) {
 			System.out.println("No configuration file found. Please create configuration file: " + this.file);
+			System.out.println("Technical Error Messages: ");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
 		} catch (IOException t) {
 			System.out.println("Could not load configuration file. Please make sure the file is readable by java process");
 		} finally {

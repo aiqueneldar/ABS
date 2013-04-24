@@ -1,4 +1,6 @@
-import utils.ConfigReader;
+import utils.*;
+import server.networking.ServerEngine;
+
 /**
  * @author Aiquen - <a href='mailto:aiqueneldar@gmail.com'>aiqueneldar@gmail.com</a>
  *
@@ -9,20 +11,14 @@ public class ABS {
 	 * @param args arguments. None used at the moment
 	 */
 	public static void main(String[] args) {
+		System.out.print("Creating a config object...");
 		ConfigReader config = new ConfigReader();
-		System.out.println("Created a ConfigReader object");
-		System.out.print("Trying to print test property: ");
-		System.out.println(config.getProperty("test"));
 		System.out.println("Done");
-		System.out.print("Changing 'test' property...");
-		config.setProperty("test", "other");
-		System.out.println("done");
-		System.out.println("New value: " + config.getProperty("test"));
+		System.out.print("Creating server object...");
+		ServerEngine server = new ServerEngine(config);
 		System.out.println("Done");
-		System.out.print("Saving new value to file...");
-		config.saveProperties();
-		System.out.println("done");
-		System.out.println("Done");
+		System.out.println("Starting server...");
+		server.start();
 	}
 
 }

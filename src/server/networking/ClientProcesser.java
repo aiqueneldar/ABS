@@ -6,6 +6,7 @@ package server.networking;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
 
@@ -24,6 +25,11 @@ public class ClientProcesser implements Runnable {
 	private Socket cliSocket;
 	
 	/**
+	 * Holds the output stream for the transmit method to use
+	 */
+	private PrintWriter output;
+	
+	/**
 	 * Holds the storage enginge used to store and retrive values.
 	 */
 	private StorageEngine storage;
@@ -40,11 +46,19 @@ public class ClientProcesser implements Runnable {
 	public ClientProcesser(ConfigReader config, Socket client) {
 		this.cliSocket = client;
 		try {
+			this.output = new PrintWriter(this.cliSocket.getOutputStream(), true);
+		} catch (IOException ioerr) {
+			System.out.println("Can't get output stream to client. Quitting.\nTechnical info:");
+			System.out.println(ioerr.getMessage());
+			ioerr.printStackTrace();
+		}
+		try {
 			this.storage = new StorageEngine(config);
 		} catch (Exception stex) {
 			this.storage = null;
 		}
 		this.config = config;
+		
 	}
 	/**s
 	 * Thread start
@@ -53,6 +67,15 @@ public class ClientProcesser implements Runnable {
 	 */
 	public void run() {
 		BufferedReader data;
+		// Check if we have room for more connections before processing the first command. maxConnections of 0 means unlimited number of clients can connect
+		System.out.println("Current connections: " + ServerEngine.currConnections + "/" + ServerEngine.maxConnections);
+		if  ((ServerEngine.currConnections + 1) > ServerEngine.maxConnections && ServerEngine.maxConnections != 0) {
+			this.transmit("FAIL;Too many clients connected to server. Disconnecting...");
+		System.out.println("Too many connected clients. Disconnecting current client: " + this.cliSocket.getRemoteSocketAddress().toString());
+			return;
+		} else {
+			++ServerEngine.currConnections;
+		}
 	
 		try {
 			data = new BufferedReader(new InputStreamReader(this.cliSocket.getInputStream()));
@@ -65,23 +88,23 @@ public class ClientProcesser implements Runnable {
 	
 		try {
 			command = data.readLine();
+			System.out.println("Command: " + command);
 		} catch (IOException e) {
 			System.out.println("Couldn't get command string");
 			return;
 		}
 		
-		// Check if we have room for more connections before processing the first command. maxConnections of 0 means unlimited number of clients can connect
-		if  ((ServerEngine.currConnections + 1) > ServerEngine.maxConnections && ServerEngine.maxConnections != 0 && this.storage != null) {
-			this.transmit("FAIL;Too many clients connected to server. Disconnecting...");
-			System.out.println("Too many connected clients. Disconnecting current client: " + this.cliSocket.getRemoteSocketAddress().toString());
-			return;
-		} else {
-			++ServerEngine.currConnections;
-		}
-	
 		while(command != null) {
-			if (!this.process(command))
+			if (!this.process(command)) {
+				this.transmit("MSG;Disconnected");
+				try {
+					this.cliSocket.close();
+				} catch (IOException ioerr) {
+					System.out.println("Couldn't close connection to client.");
+				}
+				--ServerEngine.currConnections;
 				break;
+			}
 			try {
 				command = data.readLine();
 			} catch (IOException e) {
@@ -112,15 +135,18 @@ public class ClientProcesser implements Runnable {
 		String returnstring = "FAIL;Not a recognized command!";
 		
 		// Rename the part with command data for better readability
-		String payload = parts[2];
+		String payload = "";
+		if (parts.length >= 3)
+			payload = parts[2];
 		
 		// Switch the commands. This function looks for valid commands. The function executing the command valuates the payload data for the command
 		switch (parts[1]) {
 		case "adduser": 
-			if (this.addUser(payload)) {
+			String result = this.addUser(payload);
+			if (result.equals("Success")) {
 				returnstring = "SUCCESS;User added";
 			} else {
-				returnstring = "FAIL;User not added";
+				returnstring = "FAIL;" + result;
 			}
 			
 			break;
@@ -272,7 +298,7 @@ public class ClientProcesser implements Runnable {
 			}
 			
 		case "search":
-			String result = this.search(payload);
+			result = this.search(payload);
 			if (result.isEmpty()) {
 				returnstring = "FAIL;No results found";
 			} else {
@@ -292,7 +318,6 @@ public class ClientProcesser implements Runnable {
 	}
 
 	private boolean authClient(String client) {
-		this.config.reloadProperties();
 		String clients = this.config.getProperty("allowedclients");
 		String[] clientList = clients.split(";");
 		if (Arrays.asList(clientList).contains(client)) {
@@ -302,13 +327,13 @@ public class ClientProcesser implements Runnable {
 		}
 	}
 
-	private boolean addUser(String payload) {
+	private String addUser(String payload) {
 		String[] data = payload.split(";");
 		if (data.length != 2) {
-			return false;
+			return "Fail";
 		}
 		
-		// This is needed because new uesers don't have user ids yet.
+		// This is needed because new users don't have user ids yet.
 		User newUser = User.createUser(data[0], data[1]);
 		
 		return this.storage.store(newUser);
@@ -384,6 +409,7 @@ public class ClientProcesser implements Runnable {
 	 * @return Returns true if message was sent, false other whise
 	 */
 	public boolean transmit(String data) {
+		this.output.println(data);	
 		return true;
 	}
 }

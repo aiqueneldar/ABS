@@ -14,7 +14,7 @@ public class StorageEngine {
 	private ConfigReader config;
 	
 	/**
-	 * The storage mecanism used to stora values. Either database or flatfile
+	 * The storage mechanism used to store values. Either database or flat file
 	 */
 	private Storage storage;
 	
@@ -23,9 +23,11 @@ public class StorageEngine {
 		if (this.config.getProperty("usedatabasestorage").equals("yes") || this.config.getProperty("usedatabasestorage").isEmpty()) {
 			try {
 				this.storage = new DatabaseStorage(this.config);
+				System.out.println("Created database storage");
 			} catch (Exception dbex) {
 				try {
 					this.storage = new FileStorage(this.config);
+					System.out.println("Created flat file storage");
 				} catch (Exception fiex) {
 					System.out.println("Could not create any kind of storage");
 					throw new Exception("Could not create any kind of storage");
@@ -34,6 +36,7 @@ public class StorageEngine {
 		} else {
 			try {
 				this.storage = new FileStorage(this.config);
+				System.out.println("Created flat file storage");
 			} catch (Exception fiex) {
 				System.out.println("Could not create a filestorage, and database storage is turned off");
 				throw new Exception("Could not create file storage, and database storage is turned off");
@@ -41,7 +44,7 @@ public class StorageEngine {
 		}
 	}
 	
-	public boolean store(User user) {
+	public String store(User user) {
 		return this.storage.store(user); 
 	}
 	
